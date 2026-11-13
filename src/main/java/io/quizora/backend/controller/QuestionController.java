@@ -1,6 +1,8 @@
 package io.quizora.backend.controller;
 
+import io.quizora.backend.entity.Question;
 import io.quizora.backend.service.QuestionService;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -15,8 +17,8 @@ public class QuestionController {
         this.questionService = questionService;
     }
 
-    @GetMapping
-    public void getQuestions() {
-        questionService.getAllQuestions();
+    public ResponseEntity<Question> createQuestion(Question question) {
+        questionService.createQuestion(question);
+        return ResponseEntity.ok("Question Created");
     }
 }
