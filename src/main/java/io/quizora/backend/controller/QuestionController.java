@@ -6,6 +6,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/question")
 public class QuestionController {
@@ -16,5 +18,10 @@ public class QuestionController {
     @PostMapping("/createQuestion")
     public Question createQuestion(@RequestBody Question question) {
         return questionService.createQuestion(question);
+    }
+
+    @GetMapping("/list")
+    public List<Question>  getQuizQuestions() {
+        return questionService.getQuizQuestions();
     }
 }
