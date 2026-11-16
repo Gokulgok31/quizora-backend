@@ -31,4 +31,9 @@ public class QuizController {
         return quizService.generateQuiz(quizId);
     }
 
+    @DeleteMapping("/delete/{id}")
+    public String deleteQuiz(@PathVariable Integer id) {
+        return quizService.deleteQuiz(id);
+    }
+
 }
