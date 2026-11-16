@@ -31,8 +31,9 @@ public class QuizServiceImpl implements QuizService {
         Exam exam = examRepository.findByExamCode(examCode)
                 .orElseThrow(() -> new RuntimeException("ExamCode not found"));
 
-        long availableQuestions =
+        int availableQuestions =
                 questionRepository.countByExam_ExamCode(examCode);
+        quiz.setNumberOfQuestions(availableQuestions);
         int passingMarks = calculatePassMark(quiz, availableQuestions);
         quiz.setPassingMarks(passingMarks);
         quiz.setExam(exam);
@@ -83,5 +84,14 @@ public class QuizServiceImpl implements QuizService {
 
         }
         return questionList;
+    }
+
+    @Override
+    public String deleteQuiz(Integer id) {
+        if(!quizRepository.existsById(id)) {
+            throw new RuntimeException("Id not found");
+        }
+        quizRepository.deleteById(id);
+        return "Quiz with Id: "+ id +" deleted successfully";
     }
 }
