@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class StudentserviceImpl implements StudentService {
@@ -47,5 +48,20 @@ public class StudentserviceImpl implements StudentService {
         return studentRepository.save(existingStudent);
     }
 
+    @Override
+    public Student updateStudentByPatch(Integer id, Map<String, Object> updates) {
 
+        Student student = studentRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Student not found"));
+
+        updates.forEach((key, value) -> {
+            switch (key) {
+                case "rollNumber" ->
+                    student.setStudentName((String) value);
+                case "studentName" ->
+                    student.setStudentName((String) value);
+            }
+        });
+        return studentRepository.save(student);
+    }
 }

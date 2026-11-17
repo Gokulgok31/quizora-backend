@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/student")
@@ -37,5 +38,10 @@ public class StudentController {
     @PutMapping("/update/{id}")
     public Student updateStudent(@PathVariable Integer id, @RequestBody Student student) {
         return studentService.updateStudent(id, student);
+    }
+
+    @PatchMapping("/updateByPatch/{id}")
+    public Student updateStudentByPatch(@PathVariable Integer id, @RequestBody Map<String, Object> updates) {
+        return studentService.updateStudentByPatch(id, updates);
     }
 }
