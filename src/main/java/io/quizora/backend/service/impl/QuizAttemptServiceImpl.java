@@ -1,11 +1,10 @@
 package io.quizora.backend.service.impl;
 
+import io.quizora.backend.dto.QuestionDto;
 import io.quizora.backend.dto.QuizAttemptRequestDto;
 import io.quizora.backend.dto.QuizAttemptResponseDto;
-import io.quizora.backend.entity.AttemptStatus;
-import io.quizora.backend.entity.Quiz;
-import io.quizora.backend.entity.QuizAttempt;
-import io.quizora.backend.entity.Student;
+import io.quizora.backend.entity.*;
+import io.quizora.backend.repository.QuestionRepository;
 import io.quizora.backend.repository.QuizAttemptRepository;
 import io.quizora.backend.repository.QuizRepository;
 import io.quizora.backend.repository.StudentRepository;
@@ -15,6 +14,8 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Service
 public class QuizAttemptServiceImpl implements QuizAttemptService {
@@ -25,6 +26,8 @@ public class QuizAttemptServiceImpl implements QuizAttemptService {
     StudentRepository studentRepository;
     @Autowired
     QuizRepository quizRepository;
+    @Autowired
+    QuestionRepository questionRepository;
 
 
     @Override
@@ -78,5 +81,41 @@ public class QuizAttemptServiceImpl implements QuizAttemptService {
         response.setStartedAt(savedAttempt.getStartedAt());
 
         return response;
+    }
+
+    @Override
+    public List<QuestionDto> generateQuestionsForQuizAttempt(Integer attemptId) {
+
+        QuizAttempt quizAttempt = quizAttemptRepository.findById(attemptId)
+                .orElseThrow(() -> new RuntimeException("Quiz attempt Id not found"));
+        if(!quizAttempt.getStatus().equals(AttemptStatus.IN_PROGRESS)) {
+            throw new RuntimeException("Quiz was Not Attempted Before");
+        }
+        Quiz quiz = quizAttempt.getQuiz();
+        Exam exam = quiz.getExam();
+        List<Question> questionsList = questionRepository.findByExam_ExamCode(exam.getExamCode());
+        Integer configuredQuestions = quiz.getNumberOfQuestions();
+        Integer totalQuestions = questionsList.size();
+        if(totalQuestions < configuredQuestions) {
+            throw new RuntimeException("Not enough questions present");
+        }
+        questionsList = questionsList.subList(0, configuredQuestions);
+        List<QuestionDto> displayQuestions = getQuestionDtos(quiz, questionsList);
+        return displayQuestions;
+    }
+
+    private static List<QuestionDto> getQuestionDtos(Quiz quiz, List<Question> questionsList) {
+        List<QuestionDto> displayQuestions = new ArrayList<>();
+        for(Question question: questionsList) {
+            QuestionDto questionDto = new QuestionDto();
+            questionDto.setId(question.getId());
+            questionDto.setQuestionTitle(question.getQuestionTitle());
+            questionDto.setOption1(question.getOption1());
+            questionDto.setOption2(question.getOption2());
+            questionDto.setOption3(question.getOption3());
+            questionDto.setOption4(question.getOption4());
+            displayQuestions.add(questionDto);
+        }
+        return displayQuestions;
     }
 }
