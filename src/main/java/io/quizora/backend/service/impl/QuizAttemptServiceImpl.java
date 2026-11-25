@@ -1,21 +1,17 @@
 package io.quizora.backend.service.impl;
 
-import io.quizora.backend.dto.QuestionDto;
-import io.quizora.backend.dto.QuizAttemptRequestDto;
-import io.quizora.backend.dto.QuizAttemptResponseDto;
+import io.quizora.backend.dto.*;
 import io.quizora.backend.entity.*;
-import io.quizora.backend.repository.QuestionRepository;
-import io.quizora.backend.repository.QuizAttemptRepository;
-import io.quizora.backend.repository.QuizRepository;
-import io.quizora.backend.repository.StudentRepository;
+import io.quizora.backend.repository.*;
 import io.quizora.backend.service.QuizAttemptService;
+import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
-import java.time.LocalTime;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
+import java.util.concurrent.ThreadLocalRandom;
 
 @Service
 public class QuizAttemptServiceImpl implements QuizAttemptService {
@@ -28,6 +24,8 @@ public class QuizAttemptServiceImpl implements QuizAttemptService {
     QuizRepository quizRepository;
     @Autowired
     QuestionRepository questionRepository;
+    @Autowired
+    StudentAnswerRepository studentAnswerRepository;
 
 
     @Override
@@ -117,5 +115,61 @@ public class QuizAttemptServiceImpl implements QuizAttemptService {
             displayQuestions.add(questionDto);
         }
         return displayQuestions;
+    }
+
+    @Override
+    public boolean validateQuizAttempt(QuizAttempt quizAttempt) {
+        if(AttemptStatus.IN_PROGRESS.equals(quizAttempt.getStatus())) {
+            return true;
+        }
+        return false;
+    }
+
+    @Override
+    public boolean validateTimeLimit(QuizAttempt quizAttempt) {
+
+        Quiz quiz = quizAttempt.getQuiz();
+
+        LocalDateTime startTime = quizAttempt.getStartedAt();
+        LocalDateTime endTime = startTime.plusMinutes(quiz.getDurationInMinutes());
+        LocalDateTime currentTime = LocalDateTime.now();
+
+        return !currentTime.isAfter(endTime);
+    }
+
+    @Override
+    public boolean validateSubmittedQuestionId(QuizAttempt quizAttempt, StudentAnswerRequestDto studentAnswerRequestDto) {
+        Exam exam = quizAttempt.getQuiz().getExam();
+        List<Question> questions = questionRepository.findByExam_ExamCode(exam.getExamCode());
+        Quiz quiz = quizAttempt.getQuiz();
+        if(questions.size() < quiz.getNumberOfQuestions()) {
+            throw new RuntimeException("Not enough questions found");
+        }
+        boolean validation = questions.stream()
+                .limit(quiz.getNumberOfQuestions())
+                .anyMatch(question -> question.getId().equals(studentAnswerRequestDto.getQuestionId()));
+        return validation;
+    }
+
+    @Transactional
+    @Override
+    public void submitAnswers(AnswerSubmissionRequestDto answerSubmissionRequestDto) {
+
+        QuizAttempt quizAttempt = quizAttemptRepository.findById(answerSubmissionRequestDto.getAttemptId())
+                .orElseThrow(() -> new RuntimeException("Quiz Attempt not found"));
+
+        List<StudentAnswerRequestDto> submittedAnswers = answerSubmissionRequestDto.getSubmittedAnswers();
+        for(StudentAnswerRequestDto answers: submittedAnswers) {
+            if(validateTimeLimit(quizAttempt)) {
+                if (validateSubmittedQuestionId(quizAttempt, answers)) {
+                    StudentAnswer studentAnswer = new StudentAnswer();
+                    studentAnswer.setQuestion();
+                    studentAnswer.setQuizAttempt(quizAttempt);
+                    studentAnswer.setSelectedAnswer(answers.getSelectedAnswer());
+                    studentAnswerRepository.save(StudentAnswer);
+                }
+            }
+        }
+        throw new RuntimeException("Failed to save answers");
     }
 }

@@ -5,6 +5,6 @@ import lombok.Data;
 @Data
 public class StudentAnswerRequestDto {
 
-    Integer questionId;
-    String selectedAnswer;
+    private Integer questionId;
+    private String selectedAnswer;
 }
