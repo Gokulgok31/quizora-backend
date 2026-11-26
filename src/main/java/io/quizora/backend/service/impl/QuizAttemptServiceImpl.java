@@ -158,18 +158,29 @@ public class QuizAttemptServiceImpl implements QuizAttemptService {
         QuizAttempt quizAttempt = quizAttemptRepository.findById(answerSubmissionRequestDto.getAttemptId())
                 .orElseThrow(() -> new RuntimeException("Quiz Attempt not found"));
 
+        Set<Integer> questionIds = new HashSet<>();
         List<StudentAnswerRequestDto> submittedAnswers = answerSubmissionRequestDto.getSubmittedAnswers();
-        for(StudentAnswerRequestDto answers: submittedAnswers) {
+
+        if(AttemptStatus.IN_PROGRESS.equals(quizAttempt.getStatus())) {
             if(validateTimeLimit(quizAttempt)) {
-                if (validateSubmittedQuestionId(quizAttempt, answers)) {
-                    StudentAnswer studentAnswer = new StudentAnswer();
-                    studentAnswer.setQuestion();
-                    studentAnswer.setQuizAttempt(quizAttempt);
-                    studentAnswer.setSelectedAnswer(answers.getSelectedAnswer());
-                    studentAnswerRepository.save(StudentAnswer);
-                }
-            }
-        }
-        throw new RuntimeException("Failed to save answers");
+                for(StudentAnswerRequestDto answers: submittedAnswers) {
+                        if (!questionIds.add(answers.getQuestionId())) {
+                            throw new RuntimeException("Duplicate question ID submitted");
+                        }
+                        if (validateSubmittedQuestionId(quizAttempt, answers)) {
+                                Question question = questionRepository.findById(answers.getQuestionId())
+                                        .orElseThrow(() -> new RuntimeException("No Questions found with this id: " + answers.getQuestionId()));
+                                StudentAnswer studentAnswer = new StudentAnswer();
+                                studentAnswer.setQuestion(question);
+                                studentAnswer.setQuizAttempt(quizAttempt);
+                                studentAnswer.setSelectedAnswer(answers.getSelectedAnswer());
+                                studentAnswerRepository.save(studentAnswer);
+                            } else throw new RuntimeException("wrong question present");
+                        }
+                    }  else throw new RuntimeException("Time exceeded, failed to save answers");
+                } else throw new RuntimeException("Not yet started");
+        quizAttempt.setStatus(AttemptStatus.SUBMITTED);
+        quizAttempt.setSubmittedAt(LocalDateTime.now());
+        quizAttemptRepository.save(quizAttempt);
     }
 }
