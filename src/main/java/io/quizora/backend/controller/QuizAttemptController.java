@@ -1,6 +1,7 @@
 package io.quizora.backend.controller;
 
 
+import io.quizora.backend.dto.AnswerSubmissionRequestDto;
 import io.quizora.backend.dto.QuestionDto;
 import io.quizora.backend.dto.QuizAttemptRequestDto;
 import io.quizora.backend.dto.QuizAttemptResponseDto;
@@ -26,5 +27,10 @@ public class QuizAttemptController {
     @GetMapping("/{attemptId}/questions")
     public List<QuestionDto> generateQuestionsForQuizAttempt(@PathVariable Integer attemptId) {
         return quizAttemptService.generateQuestionsForQuizAttempt(attemptId);
+    }
+
+    @PostMapping("/submit")
+    public void submitAnswers(@RequestBody AnswerSubmissionRequestDto answerSubmissionRequestDto) {
+        quizAttemptService.submitAnswers(answerSubmissionRequestDto);
     }
 }
