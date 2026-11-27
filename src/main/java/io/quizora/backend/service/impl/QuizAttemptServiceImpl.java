@@ -153,34 +153,90 @@ public class QuizAttemptServiceImpl implements QuizAttemptService {
 
     @Transactional
     @Override
-    public void submitAnswers(AnswerSubmissionRequestDto answerSubmissionRequestDto) {
+    public void submitAnswers(AnswerSubmissionRequestDto requestDto) {
 
-        QuizAttempt quizAttempt = quizAttemptRepository.findById(answerSubmissionRequestDto.getAttemptId())
+        QuizAttempt quizAttempt = quizAttemptRepository.findById(requestDto.getAttemptId())
                 .orElseThrow(() -> new RuntimeException("Quiz Attempt not found"));
 
-        Set<Integer> questionIds = new HashSet<>();
-        List<StudentAnswerRequestDto> submittedAnswers = answerSubmissionRequestDto.getSubmittedAnswers();
+        if (!AttemptStatus.IN_PROGRESS.equals(quizAttempt.getStatus())) {
+            throw new RuntimeException("Quiz attempt is not in progress");
+        }
+        if (!validateTimeLimit(quizAttempt)) {
+            throw new RuntimeException("Time exceeded, failed to submit answers");
+        }
+        List<StudentAnswerRequestDto> submittedAnswers = requestDto.getSubmittedAnswers();
 
-        if(AttemptStatus.IN_PROGRESS.equals(quizAttempt.getStatus())) {
-            if(validateTimeLimit(quizAttempt)) {
-                for(StudentAnswerRequestDto answers: submittedAnswers) {
-                        if (!questionIds.add(answers.getQuestionId())) {
-                            throw new RuntimeException("Duplicate question ID submitted");
-                        }
-                        if (validateSubmittedQuestionId(quizAttempt, answers)) {
-                                Question question = questionRepository.findById(answers.getQuestionId())
-                                        .orElseThrow(() -> new RuntimeException("No Questions found with this id: " + answers.getQuestionId()));
-                                StudentAnswer studentAnswer = new StudentAnswer();
-                                studentAnswer.setQuestion(question);
-                                studentAnswer.setQuizAttempt(quizAttempt);
-                                studentAnswer.setSelectedAnswer(answers.getSelectedAnswer());
-                                studentAnswerRepository.save(studentAnswer);
-                            } else throw new RuntimeException("wrong question present");
-                        }
-                    }  else throw new RuntimeException("Time exceeded, failed to save answers");
-                } else throw new RuntimeException("Not yet started");
-        quizAttempt.setStatus(AttemptStatus.SUBMITTED);
+        if (submittedAnswers == null) {
+            throw new RuntimeException("Submitted answers cannot be null");
+        }
+        Set<Integer> questionIds = new HashSet<>();
+
+        for (StudentAnswerRequestDto answer : submittedAnswers) {
+
+            if (answer.getQuestionId() == null) {
+                throw new RuntimeException("Question ID cannot be null");
+            }
+
+            if (!questionIds.add(answer.getQuestionId())) {
+                throw new RuntimeException("Duplicate question ID submitted");
+            }
+
+            if (!validateSubmittedQuestionId(quizAttempt, answer)) {
+                throw new RuntimeException(
+                        "Invalid question ID: " + answer.getQuestionId());
+            }
+        }
+
+        // 6. Fetch questions and prepare student answers
+        List<StudentAnswer> studentAnswers = new ArrayList<>();
+        int marks = 0;
+
+        for (StudentAnswerRequestDto answer : submittedAnswers) {
+
+            Question question = questionRepository.findById(answer.getQuestionId())
+                    .orElseThrow(() -> new RuntimeException(
+                            "Question not found: " + answer.getQuestionId()));
+
+            StudentAnswer studentAnswer = new StudentAnswer();
+            studentAnswer.setQuestion(question);
+            studentAnswer.setQuizAttempt(quizAttempt);
+            studentAnswer.setSelectedAnswer(answer.getSelectedAnswer());
+
+            studentAnswers.add(studentAnswer);
+
+            if (question.getRightAnswer() != null
+                    && answer.getSelectedAnswer() != null
+                    && question.getRightAnswer().equalsIgnoreCase(answer.getSelectedAnswer())) {
+                marks++;
+            }
+        }
+
+        studentAnswerRepository.saveAll(studentAnswers);
+
+        quizAttempt.setScore(marks);
         quizAttempt.setSubmittedAt(LocalDateTime.now());
+        quizAttempt.setStatus(AttemptStatus.SUBMITTED);
+
         quizAttemptRepository.save(quizAttempt);
+    }
+
+    @Override
+    public Integer calculateQuizScore(AnswerSubmissionRequestDto requestDto) {
+
+        int marks = 0;
+
+        for (StudentAnswerRequestDto answer : requestDto.getSubmittedAnswers()) {
+
+            Question question = questionRepository.findById(answer.getQuestionId())
+                    .orElseThrow(() -> new RuntimeException(
+                            "Question not found: " + answer.getQuestionId()));
+
+            if (question.getRightAnswer() != null
+                    && question.getRightAnswer().equalsIgnoreCase(answer.getSelectedAnswer())) {
+                marks++;
+            }
+        }
+
+        return marks;
     }
 }
