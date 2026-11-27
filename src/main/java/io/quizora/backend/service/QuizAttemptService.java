@@ -20,4 +20,6 @@ public interface QuizAttemptService {
 
     void submitAnswers(AnswerSubmissionRequestDto answerSubmissionRequestDto);
 
+    Integer calculateQuizScore(AnswerSubmissionRequestDto requestDto);
+
 }
