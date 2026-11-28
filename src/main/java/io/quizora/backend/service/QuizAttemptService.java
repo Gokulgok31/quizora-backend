@@ -18,8 +18,10 @@ public interface QuizAttemptService {
 
     boolean validateSubmittedQuestionId(QuizAttempt quizAttempt, StudentAnswerRequestDto studentAnswerRequestDto);
 
-    void submitAnswers(AnswerSubmissionRequestDto answerSubmissionRequestDto);
+    Integer submitAnswers(AnswerSubmissionRequestDto answerSubmissionRequestDto);
 
     Integer calculateQuizScore(AnswerSubmissionRequestDto requestDto);
+
+    boolean validateSubmittedOptions(QuizAttempt quizAttempt, AnswerSubmissionRequestDto requestDto);
 
 }
