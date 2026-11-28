@@ -8,6 +8,7 @@ import io.quizora.backend.dto.QuizAttemptResponseDto;
 import io.quizora.backend.entity.Question;
 import io.quizora.backend.service.QuizAttemptService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -30,7 +31,9 @@ public class QuizAttemptController {
     }
 
     @PostMapping("/submit")
-    public void submitAnswers(@RequestBody AnswerSubmissionRequestDto answerSubmissionRequestDto) {
-        quizAttemptService.submitAnswers(answerSubmissionRequestDto);
+    public ResponseEntity<Integer> submitAnswers(@RequestBody AnswerSubmissionRequestDto requestDto) {
+
+        Integer marks = quizAttemptService.submitAnswers(requestDto);
+        return ResponseEntity.ok(marks);
     }
 }
